@@ -1,26 +1,55 @@
-name: Claude AI Integration Workflow
+name: Claude AI GitHub Agent
 
 on:
   issue_comment:
     types: [created]
-  push:
-    branches: [ main ]
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Claude üçün əmr və ya tapşırıq'
+        required: true
+        default: 'Repodakı agentləri yoxla və status ver'
+      agent:
+        description: 'İstifadə ediləcək agent (məsələn: fullstack-developer, jarvis)'
+        required: false
+        default: 'jarvis'
 
 jobs:
-  claude-agent:
+  claude-agent-runner:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Repozitoriyanı Yüklə
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Node.js Mühitini Tənzimlə
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Run Claude Assistant
+      - name: Claude və Agent Fayllarını İcra Et
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          INPUT_PROMPT: ${{ github.event.inputs.prompt || 'GitHub Claude Agent aktivdir' }}
+          INPUT_AGENT: ${{ github.event.inputs.agent || 'jarvis' }}
         run: |
-          echo "Claude Agent repoda aktivləşdirildi."
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            
+            console.log('🚀 Claude GitHub Agent işə düşdü!');
+            console.log('📌 Əmr:', process.env.INPUT_PROMPT);
+            console.log('🤖 Seçilən Agent:', process.env.INPUT_AGENT);
+
+            const agentsDir = path.join(process.cwd(), '.claude', 'agents');
+            if (fs.existsSync(agentsDir)) {
+              const files = fs.readdirSync(agentsDir);
+              console.log('📁 Mövcud agent fayllarının sayısı:', files.length);
+            } else {
+              console.log('⚠️ .claude/agents qovluğu tapılmadı.');
+            }
+          "
