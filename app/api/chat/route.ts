@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { prompt, model = 'openai/gpt-4o' } = await request.json();
+    const { prompt, model = 'anthropic/claude-3.5-sonnet', agentRole = 'AliDai Universal Jarvis' } = await request.json();
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'API Key təyin edilməyib.' }, { status: 500 });
+      return NextResponse.json({ error: 'OpenRouter API Key təyin edilməyib.' }, { status: 500 });
     }
+
+    const systemPrompt = `Sən AliDai-sən. Ağdaş şəhərində yerləşən, e-kommersiya (prisonshop.az), musiqi istehsalı (DJ Maga) və yerli layihələri idarə edən futuristik və son dərəcə ağıllı AI assistentisən. 
+Cari Agent Rejimi / Rolu: ${agentRole}. 
+Həmişə Azərbaycan dilində səlis, dəqiq, texniki cəhətdən mükəmməl və işgüzar tərzdə cavab ver. İstifadəçinin ehtiyaclarına uyğun dərindən təhlil apar.`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -20,9 +24,10 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: model,
         messages: [
-          { role: 'system', content: 'Sən AliDai-sən. Ağdaş şəhərində layihələri və e-kommersiyanı idarə edən futuristik Jarvis AI assistentisən.' },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
+        temperature: 0.7,
       }),
     });
 
