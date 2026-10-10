@@ -1,55 +1,45 @@
-name: Claude AI GitHub Agent
+name: Claude AI Agent Runner
 
 on:
-  issue_comment:
-    types: [created]
-  issues:
-    types: [opened, labeled]
-  pull_request:
-    types: [opened, synchronize]
   workflow_dispatch:
     inputs:
       prompt:
         description: 'Claude üçün əmr və ya tapşırıq'
         required: true
-        default: 'Repodakı agentləri yoxla və status ver'
-      agent:
-        description: 'İstifadə ediləcək agent (məsələn: fullstack-developer, jarvis)'
-        required: false
-        default: 'jarvis'
+        default: 'Agentləri yoxla və sistem hesabatı ver'
+  issue_comment:
+    types: [created]
 
 jobs:
-  claude-agent-runner:
+  claude-exec:
     runs-on: ubuntu-latest
     steps:
-      - name: Repozitoriyanı Yüklə
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Node.js Mühitini Tənzimlə
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Claude və Agent Fayllarını İcra Et
+      - name: Run Claude Agent Logic
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          INPUT_PROMPT: ${{ github.event.inputs.prompt || 'GitHub Claude Agent aktivdir' }}
-          INPUT_AGENT: ${{ github.event.inputs.agent || 'jarvis' }}
+          USER_PROMPT: ${{ github.event.inputs.prompt || 'Salam Claude, reponu idarə et.' }}
         run: |
           node -e "
             const fs = require('fs');
             const path = require('path');
-            
-            console.log('🚀 Claude GitHub Agent işə düşdü!');
-            console.log('📌 Əmr:', process.env.INPUT_PROMPT);
-            console.log('🤖 Seçilən Agent:', process.env.INPUT_AGENT);
+
+            console.log('🤖 Claude GitHub Actions daxilində işə düşdü!');
+            console.log('📝 Əmr:', process.env.USER_PROMPT);
 
             const agentsDir = path.join(process.cwd(), '.claude', 'agents');
             if (fs.existsSync(agentsDir)) {
               const files = fs.readdirSync(agentsDir);
-              console.log('📁 Mövcud agent fayllarının sayısı:', files.length);
+              console.log('📂 Tapılan agent şablonlarının sayı:', files.length);
             } else {
-              console.log('⚠️ .claude/agents qovluğu tapılmadı.');
+              console.log('⚠️ Agent qovluğu tapılmadı.');
             }
           "
