@@ -1,0 +1,26 @@
+name: Claude AI Integration Workflow
+
+on:
+  issue_comment:
+    types: [created]
+  push:
+    branches: [ main ]
+
+jobs:
+  claude-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Claude Assistant
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "Claude Agent repoda aktivləşdirildi."
