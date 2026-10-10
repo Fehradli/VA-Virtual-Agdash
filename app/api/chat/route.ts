@@ -1,17 +1,32 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 export async function POST(request: Request) {
   try {
-    const { prompt, model = 'anthropic/claude-3.5-sonnet', agentRole = 'AliDai Universal Jarvis' } = await request.json();
+    const { prompt, model = 'anthropic/claude-3.5-sonnet', agentName = 'Jarvis' } = await request.json();
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'OpenRouter API Key təyin edilməyib.' }, { status: 500 });
+      return NextResponse.json({ error: 'OpenRouter API Key tapılmadı.' }, { status: 500 });
     }
 
-    const systemPrompt = `Sən AliDai-sən. Ağdaş şəhərində yerləşən, e-kommersiya (prisonshop.az), musiqi istehsalı (DJ Maga) və yerli layihələri idarə edən futuristik və son dərəcə ağıllı AI assistentisən. 
-Cari Agent Rejimi / Rolu: ${agentRole}. 
-Həmişə Azərbaycan dilində səlis, dəqiq, texniki cəhətdən mükəmməl və işgüzar tərzdə cavab ver. İstifadəçinin ehtiyaclarına uyğun dərindən təhlil apar.`;
+    // Agent faylını .claude/agents/ qovluğundan oxumağa çalışırıq
+    let agentSystemPrompt = `Sən AliDai-sən. Ağdaş şəhərində yerləşən, texnologiya, e-kommersiya və musiqi layihələrini idarə edən futuristik AI assistentisən. Həmişə Azərbaycan dilində cavab ver.`;
+    
+    try {
+      const agentsDir = path.join(process.cwd(), '.claude', 'agents');
+      const files = fs.readdirSync(agentsDir);
+      // Uyğun agent faylını tapırıq
+      const matchedFile = files.find(f => f.toLowerCase().includes(agentName.toLowerCase().replace(/\s+/g, '-')));
+      if (matchedFile) {
+        const filePath = path.join(agentsDir, matchedFile);
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        agentSystemPrompt = `Sən aşağıdakı xüsusi agent rolundasan və bu təlimatlara tam əməl etməlisən:\n\n${fileContent}\n\nCavablarını həmişə səlis Azərbaycan dilində ver.`;
+      }
+    } catch (e) {
+      // Fayl oxunmasa default system prompt qalır
+    }
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -24,7 +39,7 @@ Həmişə Azərbaycan dilində səlis, dəqiq, texniki cəhətdən mükəmməl v
       body: JSON.stringify({
         model: model,
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: agentSystemPrompt },
           { role: 'user', content: prompt }
         ],
         temperature: 0.7,
@@ -32,6 +47,11 @@ Həmişə Azərbaycan dilində səlis, dəqiq, texniki cəhətdən mükəmməl v
     });
 
     const data = await response.json();
+    
+    if (data.error) {
+      return NextResponse.json({ error: data.error.message || 'AI xətası' }, { status: 500 });
+    }
+
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
